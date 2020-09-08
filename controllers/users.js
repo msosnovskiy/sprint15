@@ -2,6 +2,7 @@ const { NODE_ENV, JWT_SECRET } = process.env;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const NotFoundError = require('../errors/NotFoundError');
 
 module.exports.getUsers = (req, res) => {
   User.find({})
@@ -9,20 +10,20 @@ module.exports.getUsers = (req, res) => {
     .catch(() => res.status(500).send({ message: 'На сервере произошла ошибка' }));
 };
 
-module.exports.getUser = (req, res) => {
+module.exports.getUser = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (user === null) {
-        res.status(404).send({ message: `Не удалось найти пользователя с userId - ${req.params.userId}` });
-        return;
+        throw new NotFoundError('Нет пользователя с таким id');
       }
       res.send({ data: user });
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(400).send({ message: `передан некорректный ID пользователя - ${req.params.userId}` });
-      } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+    // .catch((err) => {
+    //   if (err.name === 'CastError') {
+    //     res.status(400).send({ message: `передан некорректный ID пользователя - ${req.params.userId}` });
+    //   } else res.status(500).send({ message: 'На сервере произошла ошибка' });
+    // })
+    .catch(next);
 };
 
 module.exports.createUser = (req, res) => {
