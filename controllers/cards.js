@@ -34,7 +34,7 @@ module.exports.removeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('передан некорректный ID карточки');
+        throw new ForbiddenError('передан некорректный ID карточки');
       }
       if (err.name === 'DocumentNotFoundError') {
         throw new NotFoundError('не удалось найти карточку');
