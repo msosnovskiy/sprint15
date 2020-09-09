@@ -1,4 +1,7 @@
 const Card = require('../models/card');
+const NotFoundError = require('../errors/NotFoundError');
+const BadRequestError = require('../errors/BadRequestError');
+const ForbiddenError = require('../errors/ForbiddenError');
 
 module.exports.getCards = (req, res) => {
   Card.find({})
@@ -6,18 +9,19 @@ module.exports.getCards = (req, res) => {
     .catch(() => res.status(500).send({ message: 'На сервере произошла ошибка' }));
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
   Card.create({ name, link, owner: req.user._id })
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-      } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+        throw new BadRequestError(err.message);
+      } else next(err);
+    })
+    .catch(next);
 };
 
-module.exports.removeCard = (req, res) => {
+module.exports.removeCard = (req, res, next) => {
   Card.findById(req.params.cardId)
     .orFail()
     .then(async (card) => {
@@ -26,15 +30,15 @@ module.exports.removeCard = (req, res) => {
       if (ownerId === userId) {
         const element = await Card.findByIdAndDelete(req.params.cardId);
         res.send({ data: element });
-      } else res.status(403).send({ message: 'Нет прав на удаление' });
+      } throw new BadRequestError('Нет прав на удаление');
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(400).send({ message: `передан некорректный ID карточки - ${req.params.cardId}` });
-        return;
+        throw new BadRequestError('передан некорректный ID карточки');
       }
       if (err.name === 'DocumentNotFoundError') {
-        res.status(404).send({ message: `не удалось найти карточку с cardId - ${req.params.cardId}` });
-      } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+        throw new NotFoundError('не удалось найти карточку');
+      } else next(err);
+    })
+    .catch(next);
 };
