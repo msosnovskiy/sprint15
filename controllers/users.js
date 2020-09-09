@@ -5,6 +5,7 @@ const User = require('../models/user');
 const NotFoundError = require('../errors/NotFoundError');
 const BadRequestError = require('../errors/BadRequestError');
 const ConflictError = require('../errors/ConflictError');
+const AuthorizationError = require('../errors/AuthorizationError');
 
 module.exports.getUsers = (req, res, next) => {
   User.find({})
@@ -31,45 +32,32 @@ module.exports.getUser = (req, res, next) => {
 
 module.exports.createUser = (req, res, next) => {
   const {
-    name, about, avatar, email, password,
+    name, about, avatar, email,
   } = req.body;
 
-  if (!password) {
-    throw new BadRequestError('Пароль является обязательным для заполения');
-  } else {
-    bcrypt.hash(req.body.password, 10)
-      .then((hash) => User.create({
-        name,
-        about,
-        avatar,
-        email,
-        password: hash,
-      }))
-      .then(() => res.send({
-        name, about, avatar, email,
-      }))
-      // .catch((err) => {
-      //   if (err.name === 'ValidationError') {
-      //     res.status(400).send({ message: err.message });
-      //     return;
-      //   }
-      //   if (err.name === 'MongoError' || err.code === 11000) {
-      //     res.status(409).send({ message: 'Указанный email уже занят' });
-      //   } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-      // })
-      .catch((err) => {
-        if (err.name === 'ValidationError') {
-          throw new NotFoundError(err.message);
-        }
-        if (err.name === 'MongoError' || err.code === 11000) {
-          throw new ConflictError('Указанный email уже занят');
-        } else next(err);
-      })
-      .catch(next);
-  }
+  bcrypt.hash(req.body.password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
+    .then(() => res.send({
+      name, about, avatar, email,
+    }))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        throw new NotFoundError(err.message);
+      }
+      if (err.name === 'MongoError' || err.code === 11000) {
+        throw new ConflictError('Указанный email уже занят');
+      } else next(err);
+    })
+    .catch(next);
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
@@ -79,6 +67,7 @@ module.exports.login = (req, res) => {
       });
     })
     .catch((err) => {
-      res.status(401).send({ message: err.message });
-    });
+      throw new AuthorizationError(err.message);
+    })
+    .catch(next);
 };
