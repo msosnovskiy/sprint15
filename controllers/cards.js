@@ -30,11 +30,11 @@ module.exports.removeCard = (req, res, next) => {
       if (ownerId === userId) {
         const element = await Card.findByIdAndDelete(req.params.cardId);
         res.send({ data: element });
-      } throw new BadRequestError('Нет прав на удаление');
+      } throw new ForbiddenError('Нет прав на удаление');
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new ForbiddenError('передан некорректный ID карточки');
+        throw new BadRequestError('передан некорректный ID карточки');
       }
       if (err.name === 'DocumentNotFoundError') {
         throw new NotFoundError('не удалось найти карточку');
