@@ -20,6 +20,12 @@ module.exports.getUser = (req, res, next) => {
       }
       res.send({ data: user });
     })
+
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        throw new BadRequestError('передан некорректный ID пользователя');
+      } else next(err);
+    })
     .catch(next);
 };
 
