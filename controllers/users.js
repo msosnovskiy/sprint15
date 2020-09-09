@@ -3,11 +3,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const NotFoundError = require('../errors/NotFoundError');
+const BadRequestError = require('../errors/BadRequestError');
+const ConflictError = require('../errors/ConflictError');
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(500).send({ message: 'На сервере произошла ошибка' }));
+    .catch(next);
 };
 
 module.exports.getUser = (req, res, next) => {
@@ -18,20 +20,16 @@ module.exports.getUser = (req, res, next) => {
       }
       res.send({ data: user });
     })
-    // .catch((err) => {
-    //   if (err.name === 'CastError') {
-    //     res.status(400).send({ message: `передан некорректный ID пользователя - ${req.params.userId}` });
-    //   } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-    // })
     .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
+
   if (!password) {
-    res.status(400).send({ message: 'пароль является обязательным для заполения' });
+    throw new BadRequestError('Пароль является обязательным для заполения');
   } else {
     bcrypt.hash(req.body.password, 10)
       .then((hash) => User.create({
@@ -44,15 +42,24 @@ module.exports.createUser = (req, res) => {
       .then(() => res.send({
         name, about, avatar, email,
       }))
+      // .catch((err) => {
+      //   if (err.name === 'ValidationError') {
+      //     res.status(400).send({ message: err.message });
+      //     return;
+      //   }
+      //   if (err.name === 'MongoError' || err.code === 11000) {
+      //     res.status(409).send({ message: 'Указанный email уже занят' });
+      //   } else res.status(500).send({ message: 'На сервере произошла ошибка' });
+      // })
       .catch((err) => {
         if (err.name === 'ValidationError') {
-          res.status(400).send({ message: err.message });
-          return;
+          throw new NotFoundError(err.message);
         }
         if (err.name === 'MongoError' || err.code === 11000) {
-          res.status(409).send({ message: 'Указанный email уже занят' });
-        } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-      });
+          throw new ConflictError('Указанный email уже занят');
+        } else next(err);
+      })
+      .catch(next);
   }
 };
 
