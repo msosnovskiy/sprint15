@@ -24,7 +24,7 @@ module.exports.getUser = (req, res, next) => {
 
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('передан некорректный ID пользователя');
+        throw new BadRequestError('Передан некорректный ID пользователя');
       } else next(err);
     })
     .catch(next);
@@ -48,7 +48,7 @@ module.exports.createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new NotFoundError(err.message);
+        throw new BadRequestError('Проверьте передаваемые данные');
       }
       if (err.name === 'MongoError' || err.code === 11000) {
         throw new ConflictError('Указанный email уже занят');

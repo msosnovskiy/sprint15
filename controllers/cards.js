@@ -15,7 +15,7 @@ module.exports.createCard = (req, res, next) => {
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new BadRequestError(err.message);
+        throw new BadRequestError('Проверьте передаваемые данные');
       } else next(err);
     })
     .catch(next);
@@ -34,10 +34,10 @@ module.exports.removeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('передан некорректный ID карточки');
+        throw new BadRequestError('Передан некорректный ID карточки');
       }
       if (err.name === 'DocumentNotFoundError') {
-        throw new NotFoundError('не удалось найти карточку');
+        throw new NotFoundError('Не удалось найти карточку');
       } else next(err);
     })
     .catch(next);
