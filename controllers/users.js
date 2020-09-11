@@ -48,7 +48,7 @@ module.exports.createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new BadRequestError('Проверьте передаваемые данные');
+        throw new BadRequestError(err.message);
       }
       if (err.name === 'MongoError' || err.code === 11000) {
         throw new ConflictError('Указанный email уже занят');
