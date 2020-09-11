@@ -55,7 +55,9 @@ app.post('/signup', celebrate({
 app.use('/users', auth, users);
 app.use('/cards', auth, cards);
 
-app.use(() => { throw new NotFoundError('Запрашиваемый ресурс не найден'); });
+app.use(() => {
+  throw new NotFoundError('Запрашиваемый ресурс не найден !');
+});
 
 app.use(errorLogger);
 
