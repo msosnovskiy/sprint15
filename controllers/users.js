@@ -2,60 +2,62 @@ const { NODE_ENV, JWT_SECRET } = process.env;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const NotFoundError = require('../errors/NotFoundError');
+const BadRequestError = require('../errors/BadRequestError');
+const ConflictError = require('../errors/ConflictError');
+const AuthorizationError = require('../errors/AuthorizationError');
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(500).send({ message: 'На сервере произошла ошибка' }));
+    .catch(next);
 };
 
-module.exports.getUser = (req, res) => {
+module.exports.getUser = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (user === null) {
-        res.status(404).send({ message: `Не удалось найти пользователя с userId - ${req.params.userId}` });
-        return;
+        throw new NotFoundError('Нет пользователя с таким id');
       }
       res.send({ data: user });
     })
+
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(400).send({ message: `передан некорректный ID пользователя - ${req.params.userId}` });
-      } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+        throw new BadRequestError('Передан некорректный ID пользователя');
+      } else next(err);
+    })
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
-    name, about, avatar, email, password,
+    name, about, avatar, email,
   } = req.body;
-  if (!password) {
-    res.status(400).send({ message: 'пароль является обязательным для заполения' });
-  } else {
-    bcrypt.hash(req.body.password, 10)
-      .then((hash) => User.create({
-        name,
-        about,
-        avatar,
-        email,
-        password: hash,
-      }))
-      .then(() => res.send({
-        name, about, avatar, email,
-      }))
-      .catch((err) => {
-        if (err.name === 'ValidationError') {
-          res.status(400).send({ message: err.message });
-          return;
-        }
-        if (err.name === 'MongoError' || err.code === 11000) {
-          res.status(409).send({ message: 'Указанный email уже занят' });
-        } else res.status(500).send({ message: 'На сервере произошла ошибка' });
-      });
-  }
+
+  bcrypt.hash(req.body.password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
+    .then(() => res.send({
+      name, about, avatar, email,
+    }))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        throw new BadRequestError(err.message);
+      }
+      if (err.name === 'MongoError' || err.code === 11000) {
+        throw new ConflictError('Указанный email уже занят');
+      } else next(err);
+    })
+    .catch(next);
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
@@ -65,6 +67,7 @@ module.exports.login = (req, res) => {
       });
     })
     .catch((err) => {
-      res.status(401).send({ message: err.message });
-    });
+      throw new AuthorizationError(err.message);
+    })
+    .catch(next);
 };

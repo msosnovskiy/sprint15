@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'это поле является обязательным для заполения'],
     select: false,
+    minlength: [8, 'минимальное количество символов - 8'],
   },
 });
 
